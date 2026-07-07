@@ -419,15 +419,6 @@ with st.sidebar:
     st.caption("復旧道路・交通規制 管理画面")
 
     st.markdown("---")
-    st.subheader("🗺 地図設定")
-
-    map_style = st.selectbox(
-        "地図タイプ",
-        list(MAP_STYLES.keys()),
-        index=list(MAP_STYLES.keys()).index("淡色地図"),
-    )
-
-    st.markdown("---")
     st.subheader("📅 表示条件")
 
     target_date = st.date_input(
@@ -448,7 +439,6 @@ with st.sidebar:
     show_lane = st.checkbox("車線規制", value=True)
     show_completed = st.checkbox("完了", value=True)
     show_complaints = st.checkbox("苦情を表示", value=True)
-    st.subheader("📊 進捗")
     st.subheader("🏗 施工者")
 
     contractors = ["すべて"] + sorted(df["施工者"].dropna().unique().tolist())
@@ -584,6 +574,16 @@ delayed_count = sum(
     > parse_progress(feature.get("properties", {}).get("進捗率"))
 )
 detour_routes = build_sample_detour_routes(all_features)
+
+_, map_settings_col = st.columns([0.78, 0.22])
+with map_settings_col:
+    st.caption("地図設定")
+    map_style = st.selectbox(
+        "地図タイプ",
+        list(MAP_STYLES.keys()),
+        index=list(MAP_STYLES.keys()).index("淡色地図"),
+        label_visibility="collapsed",
+    )
 
 m = folium.Map(
     location=DEFAULT_LOCATION,
