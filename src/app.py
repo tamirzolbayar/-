@@ -128,12 +128,23 @@ def build_sample_detour_routes(features):
 
 def make_complaint_tooltip(complaint):
     return f"""
-    <div style="font-size:13px; line-height:1.55; min-width:260px; max-width:320px;">
+    <div style="
+        font-size:13px;
+        line-height:1.55;
+        width:300px;
+        max-width:300px;
+        white-space:normal;
+        overflow-wrap:anywhere;
+        word-break:break-word;
+        box-sizing:border-box;
+    ">
         <div style="font-weight:700; color:#4c1d95; margin-bottom:4px;">
             苦情 {complaint["id"]} / {complaint["status"]}
         </div>
         <div><b>地区:</b> {complaint["district"]}</div>
         <div><b>受付日:</b> {complaint["date"]}</div>
+        <div><b>住所:</b> {complaint["address"]}</div>
+        <div><b>電話番号:</b> {complaint["phone"]}</div>
         <div style="margin-top:6px;"><b>苦情内容:</b><br>{complaint["content"]}</div>
         <div style="margin-top:6px;"><b>対策:</b><br>{complaint["response"]}</div>
     </div>
@@ -171,6 +182,8 @@ COMPLAINTS = [
         "district": "飯田",
         "location": [37.43618, 137.25942],
         "date": "2026-07-12",
+        "address": "珠洲市飯田町12-18",
+        "phone": "0768-82-1041",
         "content": "工事車両の出入りが多く、朝の通勤時間帯に歩行者が通りにくい。",
         "response": "誘導員を朝夕の時間帯に追加配置し、歩行者通路をカラーコーンで明示。",
         "status": "対応中",
@@ -180,6 +193,8 @@ COMPLAINTS = [
         "district": "飯田",
         "location": [37.43758, 137.26036],
         "date": "2026-07-13",
+        "address": "珠洲市飯田町15-7",
+        "phone": "0768-82-2198",
         "content": "夜間の仮設照明が住宅側に向いていてまぶしい。",
         "response": "照明角度を道路側へ調整し、遮光板を追加設置。",
         "status": "対応済",
@@ -189,9 +204,176 @@ COMPLAINTS = [
         "district": "飯田",
         "location": [37.43472, 137.25892],
         "date": "2026-07-14",
+        "address": "珠洲市飯田町9-31",
+        "phone": "0768-82-3375",
         "content": "片側交互通行の待ち時間が長く、バス停への到着が遅れる。",
         "response": "信号サイクルを見直し、バス通過時間帯は誘導員による優先案内を実施。",
         "status": "確認中",
+    },
+    {
+        "id": "C-004",
+        "district": "飯田",
+        "location": [37.43834, 137.25878],
+        "date": "2026-07-15",
+        "address": "珠洲市飯田町18-4",
+        "phone": "0768-82-4512",
+        "content": "工事区間付近の段差で自転車が通りにくく、雨の日に滑りやすい。",
+        "response": "仮舗装を追加し、段差注意看板と滑り止めマットを設置。",
+        "status": "対応中",
+    },
+    {
+        "id": "C-005",
+        "district": "飯田",
+        "location": [37.43532, 137.26146],
+        "date": "2026-07-15",
+        "address": "珠洲市飯田町7-22",
+        "phone": "0768-82-6204",
+        "content": "大型車通行時の振動で店舗の商品棚が揺れる。",
+        "response": "徐行看板を増設し、施工業者へ低速走行を再周知。",
+        "status": "対応中",
+    },
+    {
+        "id": "C-006",
+        "district": "飯田",
+        "location": [37.43902, 137.25794],
+        "date": "2026-07-16",
+        "address": "珠洲市飯田町20-11",
+        "phone": "0768-82-7830",
+        "content": "迂回案内の看板が小さく、交差点で迷う車が多い。",
+        "response": "案内看板を大きいものに交換し、交差点手前にも予告看板を追加。",
+        "status": "対応済",
+    },
+    {
+        "id": "C-007",
+        "district": "飯田",
+        "location": [37.43391, 137.26008],
+        "date": "2026-07-16",
+        "address": "珠洲市飯田町6-8",
+        "phone": "0768-82-5409",
+        "content": "朝方の重機作業音が大きく、近隣住宅で会話が聞き取りにくい。",
+        "response": "早朝作業を必要最小限にし、防音シートの設置範囲を拡大。",
+        "status": "確認中",
+    },
+    {
+        "id": "C-008",
+        "district": "飯田",
+        "location": [37.43682, 137.26218],
+        "date": "2026-07-17",
+        "address": "珠洲市飯田町14-26",
+        "phone": "0768-82-1187",
+        "content": "歩行者通路が狭く、ベビーカーで通る際に車道へ出そうになる。",
+        "response": "仮歩道幅を広げ、車道側に仮設ガードフェンスを設置。",
+        "status": "対応中",
+    },
+    {
+        "id": "C-009",
+        "district": "飯田",
+        "location": [37.43792, 137.26122],
+        "date": "2026-07-17",
+        "address": "珠洲市飯田町17-2",
+        "phone": "0768-82-9044",
+        "content": "雨天時に排水が悪く、住宅前に水たまりができる。",
+        "response": "仮排水溝を清掃し、土のうで水の流れを側溝へ誘導。",
+        "status": "対応済",
+    },
+    {
+        "id": "C-010",
+        "district": "飯田",
+        "location": [37.43571, 137.25762],
+        "date": "2026-07-18",
+        "address": "珠洲市飯田町5-19",
+        "phone": "0768-82-6731",
+        "content": "工事車両の駐車位置により、見通しが悪くなっている。",
+        "response": "駐車禁止範囲を設定し、作業車の待機場所を変更。",
+        "status": "対応済",
+    },
+    {
+        "id": "C-011",
+        "district": "正院",
+        "location": [37.44028, 137.27564],
+        "date": "2026-07-18",
+        "address": "珠洲市正院町正院21-6",
+        "phone": "0768-82-3306",
+        "content": "通行止め予告が直前で、配達ルートの変更が間に合わない。",
+        "response": "前日までに町内掲示板と現場看板へ予定を掲示する運用に変更。",
+        "status": "対応中",
+    },
+    {
+        "id": "C-012",
+        "district": "正院",
+        "location": [37.43982, 137.27612],
+        "date": "2026-07-19",
+        "address": "珠洲市正院町正院18-14",
+        "phone": "0768-82-5172",
+        "content": "工事区間の砂ぼこりで洗濯物が汚れる。",
+        "response": "散水回数を増やし、乾燥時は清掃車による路面清掃を追加。",
+        "status": "対応中",
+    },
+    {
+        "id": "C-013",
+        "district": "蛸島",
+        "location": [37.44396, 137.30212],
+        "date": "2026-07-19",
+        "address": "珠洲市蛸島町ナ部3-5",
+        "phone": "0768-82-7925",
+        "content": "港方面への案内が分かりにくく、観光客が住宅地へ入り込む。",
+        "response": "港方面の誘導看板を追加し、既設看板の矢印方向を修正。",
+        "status": "確認中",
+    },
+    {
+        "id": "C-014",
+        "district": "上戸",
+        "location": [37.42482, 137.23166],
+        "date": "2026-07-20",
+        "address": "珠洲市上戸町北方2-45",
+        "phone": "0768-82-4088",
+        "content": "通学時間帯に工事車両が多く、児童の横断が不安。",
+        "response": "通学時間帯の搬入を避け、横断箇所に誘導員を配置。",
+        "status": "対応済",
+    },
+    {
+        "id": "C-015",
+        "district": "直",
+        "location": [37.45848, 137.26218],
+        "date": "2026-07-20",
+        "address": "珠洲市野々江町直48-9",
+        "phone": "0768-82-2651",
+        "content": "仮設信号の待ち時間表示がなく、いつ進めるのか分かりづらい。",
+        "response": "待ち時間の目安を現場看板に掲示し、誘導員が案内する時間帯を設定。",
+        "status": "対応中",
+    },
+    {
+        "id": "C-016",
+        "district": "宝立",
+        "location": [37.39142, 137.20348],
+        "date": "2026-07-21",
+        "address": "珠洲市宝立町鵜飼1-32",
+        "phone": "0768-82-6093",
+        "content": "工事区間手前の道路幅が狭く、対向車とのすれ違いが怖い。",
+        "response": "待避場所を明示し、幅員注意看板を手前に追加。",
+        "status": "確認中",
+    },
+    {
+        "id": "C-017",
+        "district": "宝立",
+        "location": [37.39314, 137.20402],
+        "date": "2026-07-21",
+        "address": "珠洲市宝立町鵜飼3-18",
+        "phone": "0768-82-8740",
+        "content": "夜間に仮設段差が見えづらく、車の底を擦りそうになる。",
+        "response": "反射材付き段差プレートと夜間点滅灯を設置。",
+        "status": "対応済",
+    },
+    {
+        "id": "C-018",
+        "district": "飯田",
+        "location": [37.43874, 137.26072],
+        "date": "2026-07-22",
+        "address": "珠洲市飯田町19-16",
+        "phone": "0768-82-1437",
+        "content": "店舗前の出入口が工事資材で見えにくく、来客が通り過ぎてしまう。",
+        "response": "資材置き場を移動し、店舗入口を示す仮設案内板を設置。",
+        "status": "対応中",
     },
 ]
 PRIORITY_DISTRICTS = ["蛸島", "正院", "飯田", "上戸", "直", "宝立"]
