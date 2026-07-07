@@ -90,92 +90,6 @@ def get_feature_bounds(features):
     return [[min(lats), min(lngs)], [max(lats), max(lngs)]]
 
 
-def get_location_bounds(routes):
-    lats = []
-    lngs = []
-
-    for route in routes:
-        for lat, lng in route["locations"]:
-            lats.append(lat)
-            lngs.append(lng)
-
-    if not lats or not lngs:
-        return None
-
-    return [[min(lats), min(lngs)], [max(lats), max(lngs)]]
-
-
-def find_feature_by_restriction_id(features, restriction_id):
-    for feature in features:
-        props = feature.get("properties", {})
-        if restriction_id in props.values():
-            return feature
-    return None
-
-
-def line_coordinates_to_locations(feature):
-    geometry = feature.get("geometry", {})
-    if geometry.get("type") != "LineString":
-        return []
-
-    return [
-        [coordinate[1], coordinate[0]]
-        for coordinate in geometry.get("coordinates", [])
-        if len(coordinate) >= 2
-    ]
-
-
-def points_match(first, second):
-    return abs(first[0] - second[0]) < 0.0000001 and abs(first[1] - second[1]) < 0.0000001
-
-
-def append_connected_locations(route_locations, segment_locations):
-    if not route_locations:
-        return segment_locations
-
-    if points_match(route_locations[-1], segment_locations[0]):
-        return route_locations + segment_locations[1:]
-
-    if points_match(route_locations[-1], segment_locations[-1]):
-        return route_locations + list(reversed(segment_locations[:-1]))
-
-    if points_match(route_locations[0], segment_locations[0]):
-        return list(reversed(route_locations)) + segment_locations[1:]
-
-    if points_match(route_locations[0], segment_locations[-1]):
-        return list(reversed(route_locations)) + list(reversed(segment_locations[:-1]))
-
-    return route_locations + segment_locations
-
-
-def build_detour_routes(features, district):
-    routes = []
-    for source in DETOUR_ROUTE_SOURCES.get(district, []):
-        route_locations = []
-        missing_segment = False
-
-        for restriction_id in source["restriction_ids"]:
-            feature = find_feature_by_restriction_id(features, restriction_id)
-            if feature is None:
-                missing_segment = True
-                break
-
-            route_locations = append_connected_locations(
-                route_locations,
-                line_coordinates_to_locations(feature),
-            )
-
-        if route_locations and not missing_segment:
-            routes.append(
-                {
-                    "name": source["name"],
-                    "locations": route_locations,
-                }
-            )
-
-    return routes
-
-
 def prepare_map_properties(features):
     for feature in features:
         props = feature.setdefault("properties", {})
@@ -194,27 +108,6 @@ def prepare_map_properties(features):
 BASE_DIR = Path(__file__).resolve().parent.parent
 GEOJSON_PATH = BASE_DIR / "data" / "geojson" / "suzu_sample.geojson"
 EXCEL_PATH = BASE_DIR / "data" / "excel" / "restriction_list.xlsx"
-DETOUR_COLOR = "#2e7d32"
-DETOUR_ROUTE_SOURCES = {
-    "飯田": [
-        {
-            "name": "飯田地区 R-003迂回路",
-            "restriction_ids": ["R-099", "R-088", "R-089", "R-092", "R-094", "R-107", "R-108"],
-        },
-        {
-            "name": "飯田地区 R-098迂回路",
-            "restriction_ids": ["R-097", "R-100", "R-137", "R-154"],
-        },
-        {
-            "name": "飯田地区 R-101迂回路",
-            "restriction_ids": ["R-153", "R-123", "R-116", "R-110", "R-102"],
-        },
-        {
-            "name": "飯田地区 R-106迂回路",
-            "restriction_ids": ["R-120", "R-113", "R-108"],
-        },
-    ]
-}
 PRIORITY_DISTRICTS = ["蛸島", "正院", "飯田", "上戸", "直", "宝立"]
 
 st.set_page_config(page_title="珠洲市復旧道路管理マップ", layout="wide")
@@ -279,10 +172,6 @@ with st.sidebar:
         PRIORITY_DISTRICTS,
         default=PRIORITY_DISTRICTS,
     )
-
-    st.subheader("迂回路")
-    show_detours = st.checkbox("迂回路を表示", value=True)
-    detour_district = st.selectbox("迂回路地区", list(DETOUR_ROUTE_SOURCES.keys()))
 
     st.subheader("🚧 規制種別")
 
@@ -383,8 +272,6 @@ with st.sidebar:
 with open(GEOJSON_PATH, "r", encoding="utf-8") as f:
     geojson_data = json.load(f)
 
-all_features = geojson_data["features"]
-
 geojson_data, filtered_features = apply_filters(
     geojson_data=geojson_data,
     restriction_dict=restriction_dict,
@@ -419,6 +306,12 @@ alternate_count = int(
 )
 lane_count = int(restriction_counts.astype(str).str.contains("車線", na=False).sum())
 completed_count = int(restriction_counts.astype(str).str.contains("完了", na=False).sum())
+delayed_count = sum(
+    1
+    for feature in filtered_features
+    if parse_progress(feature.get("properties", {}).get("予定進捗率"))
+    > parse_progress(feature.get("properties", {}).get("進捗率"))
+)
 
 m = folium.Map(
     location=DEFAULT_LOCATION,
@@ -433,10 +326,6 @@ folium.TileLayer(
     attr=MAP_STYLES[map_style]["attr"],
     name=map_style,
 ).add_to(m)
-
-visible_detour_routes = []
-if show_detours:
-    visible_detour_routes = build_detour_routes(all_features, detour_district)
 
 if len(geojson_data["features"]) > 0:
     prepare_map_properties(geojson_data["features"])
@@ -457,36 +346,6 @@ if len(geojson_data["features"]) > 0:
 
 else:
     st.warning("この条件に該当する規制区間はありません。")
-
-if visible_detour_routes:
-    detour_layer = folium.FeatureGroup(name="迂回路", show=True)
-    for route in visible_detour_routes:
-        route_name = route["name"]
-        route_popup = f"""
-        <div style="font-size:13px; line-height:1.6; min-width:180px;">
-            <div style="font-weight:700; color:#1b5e20;">{route_name}</div>
-            <div>規制区間に隣接する迂回路</div>
-        </div>
-        """
-        folium.PolyLine(
-            locations=route["locations"],
-            color="#ffffff",
-            weight=11,
-            opacity=0.95,
-        ).add_to(detour_layer)
-        folium.PolyLine(
-            locations=route["locations"],
-            color=DETOUR_COLOR,
-            weight=7,
-            opacity=1.0,
-            tooltip=route_name,
-            popup=folium.Popup(route_popup, max_width=260),
-        ).add_to(detour_layer)
-    detour_layer.add_to(m)
-
-    detour_bounds = get_location_bounds(visible_detour_routes)
-    if detour_bounds is not None:
-        m.fit_bounds(detour_bounds, padding=(80, 80))
 
 map_summary_html = f"""
 <div style="
@@ -512,7 +371,7 @@ map_summary_html = f"""
         <span>片側交互通行</span><strong>{alternate_count}</strong>
         <span>車線規制</span><strong>{lane_count}</strong>
         <span>完了</span><strong>{completed_count}</strong>
-        <span>迂回路</span><strong>{len(visible_detour_routes)}</strong>
+        <span>遅延</span><strong>{delayed_count}</strong>
     </div>
     <div style="height:1px; background:#e5e7eb; margin:8px 0;"></div>
     <div style="font-weight:700; font-size:13px; margin-bottom:6px;">🧭 凡例</div>
@@ -521,7 +380,6 @@ map_summary_html = f"""
         <div><span style="display:inline-block;width:26px;height:5px;background:#f57c00;margin-right:8px;vertical-align:middle;"></span>片側交互通行</div>
         <div><span style="display:inline-block;width:26px;height:5px;background:#fbc02d;margin-right:8px;vertical-align:middle;"></span>車線規制</div>
         <div><span style="display:inline-block;width:26px;height:5px;background:#1976d2;margin-right:8px;vertical-align:middle;"></span>完了</div>
-        <div><span style="display:inline-block;width:26px;height:5px;background:#2e7d32;margin-right:8px;vertical-align:middle;"></span>迂回路</div>
     </div>
 </div>
 """
