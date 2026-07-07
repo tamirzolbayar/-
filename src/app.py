@@ -93,7 +93,7 @@ def get_feature_bounds(features):
 def find_feature_by_restriction_id(features, restriction_id):
     for feature in features:
         props = feature.get("properties", {})
-        if props.get("規制ID") == restriction_id:
+        if restriction_id in props.values():
             return feature
     return None
 
