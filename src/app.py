@@ -126,6 +126,20 @@ def build_sample_detour_routes(features):
     return routes
 
 
+def make_complaint_tooltip(complaint):
+    return f"""
+    <div style="font-size:13px; line-height:1.55; min-width:260px; max-width:320px;">
+        <div style="font-weight:700; color:#4c1d95; margin-bottom:4px;">
+            苦情 {complaint["id"]} / {complaint["status"]}
+        </div>
+        <div><b>地区:</b> {complaint["district"]}</div>
+        <div><b>受付日:</b> {complaint["date"]}</div>
+        <div style="margin-top:6px;"><b>苦情内容:</b><br>{complaint["content"]}</div>
+        <div style="margin-top:6px;"><b>対策:</b><br>{complaint["response"]}</div>
+    </div>
+    """
+
+
 def prepare_map_properties(features):
     for feature in features:
         props = feature.setdefault("properties", {})
@@ -145,10 +159,40 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 GEOJSON_PATH = BASE_DIR / "data" / "geojson" / "suzu_sample.geojson"
 EXCEL_PATH = BASE_DIR / "data" / "excel" / "restriction_list.xlsx"
 DETOUR_COLOR = "#2e7d32"
+COMPLAINT_COLOR = "#7c3aed"
 SAMPLE_DETOUR_ROUTES = [
     {"name": "飯田地区 サンプル迂回路 1", "restriction_ids": ["R-203"]},
     {"name": "飯田地区 サンプル迂回路 2", "restriction_ids": ["R-188", "R-206"]},
     {"name": "飯田地区 サンプル迂回路 3", "restriction_ids": ["R-182"]},
+]
+COMPLAINTS = [
+    {
+        "id": "C-001",
+        "district": "飯田",
+        "location": [37.43618, 137.25942],
+        "date": "2026-07-12",
+        "content": "工事車両の出入りが多く、朝の通勤時間帯に歩行者が通りにくい。",
+        "response": "誘導員を朝夕の時間帯に追加配置し、歩行者通路をカラーコーンで明示。",
+        "status": "対応中",
+    },
+    {
+        "id": "C-002",
+        "district": "飯田",
+        "location": [37.43758, 137.26036],
+        "date": "2026-07-13",
+        "content": "夜間の仮設照明が住宅側に向いていてまぶしい。",
+        "response": "照明角度を道路側へ調整し、遮光板を追加設置。",
+        "status": "対応済",
+    },
+    {
+        "id": "C-003",
+        "district": "飯田",
+        "location": [37.43472, 137.25892],
+        "date": "2026-07-14",
+        "content": "片側交互通行の待ち時間が長く、バス停への到着が遅れる。",
+        "response": "信号サイクルを見直し、バス通過時間帯は誘導員による優先案内を実施。",
+        "status": "確認中",
+    },
 ]
 PRIORITY_DISTRICTS = ["蛸島", "正院", "飯田", "上戸", "直", "宝立"]
 
@@ -221,6 +265,7 @@ with st.sidebar:
     show_alternate = st.checkbox("片側交互通行", value=True)
     show_lane = st.checkbox("車線規制", value=True)
     show_completed = st.checkbox("完了", value=True)
+    show_complaints = st.checkbox("苦情を表示", value=True)
     st.subheader("📊 進捗")
     st.subheader("🏗 施工者")
 
@@ -417,6 +462,41 @@ if detour_routes:
         ).add_to(detour_layer)
     detour_layer.add_to(m)
 
+visible_complaints = [
+    complaint
+    for complaint in COMPLAINTS
+    if show_complaints and complaint["district"] in selected_districts
+]
+
+if visible_complaints:
+    complaint_layer = folium.FeatureGroup(name="苦情", show=True)
+    for complaint in visible_complaints:
+        folium.Marker(
+            location=complaint["location"],
+            tooltip=folium.Tooltip(make_complaint_tooltip(complaint), sticky=True),
+            popup=folium.Popup(make_complaint_tooltip(complaint), max_width=360),
+            icon=folium.DivIcon(
+                html=f"""
+                <div style="
+                    width:28px;
+                    height:28px;
+                    border-radius:50%;
+                    background:{COMPLAINT_COLOR};
+                    color:white;
+                    border:3px solid white;
+                    box-shadow:0 2px 8px rgba(0,0,0,0.35);
+                    display:flex;
+                    align-items:center;
+                    justify-content:center;
+                    font-weight:800;
+                    font-size:18px;
+                    line-height:1;
+                ">!</div>
+                """
+            ),
+        ).add_to(complaint_layer)
+    complaint_layer.add_to(m)
+
 map_summary_html = f"""
 <div style="
     position: fixed;
@@ -443,6 +523,7 @@ map_summary_html = f"""
         <span>完了</span><strong>{completed_count}</strong>
         <span>遅延</span><strong>{delayed_count}</strong>
         <span>迂回路</span><strong>{len(detour_routes)}</strong>
+        <span>苦情</span><strong>{len(visible_complaints)}</strong>
     </div>
     <div style="height:1px; background:#e5e7eb; margin:8px 0;"></div>
     <div style="font-weight:700; font-size:13px; margin-bottom:6px;">🧭 凡例</div>
@@ -452,6 +533,7 @@ map_summary_html = f"""
         <div><span style="display:inline-block;width:26px;height:5px;background:#fbc02d;margin-right:8px;vertical-align:middle;"></span>車線規制</div>
         <div><span style="display:inline-block;width:26px;height:5px;background:#1976d2;margin-right:8px;vertical-align:middle;"></span>完了</div>
         <div><span style="display:inline-block;width:26px;height:5px;background:#2e7d32;margin-right:8px;vertical-align:middle;"></span>迂回路</div>
+        <div><span style="display:inline-block;width:18px;height:18px;border-radius:50%;background:#7c3aed;color:white;text-align:center;line-height:18px;font-weight:800;margin-right:8px;vertical-align:middle;">!</span>苦情</div>
     </div>
 </div>
 """
