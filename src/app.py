@@ -108,6 +108,66 @@ def prepare_map_properties(features):
 BASE_DIR = Path(__file__).resolve().parent.parent
 GEOJSON_PATH = BASE_DIR / "data" / "geojson" / "suzu_sample.geojson"
 EXCEL_PATH = BASE_DIR / "data" / "excel" / "restriction_list.xlsx"
+DETOUR_COLOR = "#2e7d32"
+DETOUR_ROUTES = {
+    "飯田": [
+        {
+            "name": "飯田地区 北側迂回路",
+            "locations": [
+                [37.444525, 137.255836],
+                [37.444885, 137.255254],
+                [37.444942, 137.254452],
+                [37.445507, 137.253385],
+                [37.445625, 137.252493],
+                [37.445492, 137.252105],
+            ],
+        },
+        {
+            "name": "飯田地区 西側迂回路",
+            "locations": [
+                [37.442075, 137.245162],
+                [37.441725, 137.246022],
+                [37.441617, 137.246939],
+                [37.441106, 137.247519],
+                [37.440929, 137.248655],
+                [37.440424, 137.249868],
+            ],
+        },
+        {
+            "name": "飯田地区 中央迂回路",
+            "locations": [
+                [37.441067, 137.253166],
+                [37.440608, 137.254154],
+                [37.440499, 137.254601],
+                [37.439932, 137.254927],
+                [37.439452, 137.255177],
+                [37.438492, 137.256515],
+            ],
+        },
+        {
+            "name": "飯田地区 東側迂回路",
+            "locations": [
+                [37.446206, 137.264801],
+                [37.446208, 137.265509],
+                [37.446059, 137.265896],
+                [37.445810, 137.266124],
+                [37.445521, 137.266227],
+                [37.444815, 137.266153],
+            ],
+        },
+        {
+            "name": "飯田地区 南側迂回路",
+            "locations": [
+                [37.433333, 137.248024],
+                [37.434622, 137.246814],
+                [37.435515, 137.246095],
+                [37.436641, 137.244978],
+                [37.437487, 137.244158],
+                [37.438511, 137.243226],
+            ],
+        },
+    ]
+}
 PRIORITY_DISTRICTS = ["蛸島", "正院", "飯田", "上戸", "直", "宝立"]
 
 st.set_page_config(page_title="珠洲市復旧道路管理マップ", layout="wide")
@@ -172,6 +232,10 @@ with st.sidebar:
         PRIORITY_DISTRICTS,
         default=PRIORITY_DISTRICTS,
     )
+
+    st.subheader("🟢 迂回路")
+    show_detours = st.checkbox("迂回路を表示", value=True)
+    detour_district = st.selectbox("迂回路地区", list(DETOUR_ROUTES.keys()))
 
     st.subheader("🚧 規制種別")
 
@@ -321,6 +385,30 @@ folium.TileLayer(
     name=map_style,
 ).add_to(m)
 
+visible_detour_routes = []
+if show_detours and detour_district in selected_districts:
+    visible_detour_routes = DETOUR_ROUTES.get(detour_district, [])
+
+if visible_detour_routes:
+    detour_layer = folium.FeatureGroup(name="迂回路", show=True)
+    for route in visible_detour_routes:
+        route_name = route["name"]
+        route_popup = f"""
+        <div style="font-size:13px; line-height:1.6; min-width:180px;">
+            <div style="font-weight:700; color:#1b5e20;">🟢 {route_name}</div>
+            <div>安全通行推奨ルート</div>
+        </div>
+        """
+        folium.PolyLine(
+            locations=route["locations"],
+            color=DETOUR_COLOR,
+            weight=6,
+            opacity=0.92,
+            tooltip=route_name,
+            popup=folium.Popup(route_popup, max_width=260),
+        ).add_to(detour_layer)
+    detour_layer.add_to(m)
+
 if len(geojson_data["features"]) > 0:
     prepare_map_properties(geojson_data["features"])
 
@@ -365,6 +453,7 @@ map_summary_html = f"""
         <span>片側交互通行</span><strong>{alternate_count}</strong>
         <span>車線規制</span><strong>{lane_count}</strong>
         <span>完了</span><strong>{completed_count}</strong>
+        <span>迂回路</span><strong>{len(visible_detour_routes)}</strong>
     </div>
     <div style="height:1px; background:#e5e7eb; margin:8px 0;"></div>
     <div style="font-weight:700; font-size:13px; margin-bottom:6px;">🧭 凡例</div>
@@ -373,6 +462,7 @@ map_summary_html = f"""
         <div><span style="display:inline-block;width:26px;height:5px;background:#f57c00;margin-right:8px;vertical-align:middle;"></span>片側交互通行</div>
         <div><span style="display:inline-block;width:26px;height:5px;background:#fbc02d;margin-right:8px;vertical-align:middle;"></span>車線規制</div>
         <div><span style="display:inline-block;width:26px;height:5px;background:#1976d2;margin-right:8px;vertical-align:middle;"></span>完了</div>
+        <div><span style="display:inline-block;width:26px;height:5px;background:#2e7d32;margin-right:8px;vertical-align:middle;"></span>迂回路</div>
     </div>
 </div>
 """
