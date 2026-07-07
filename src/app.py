@@ -4,6 +4,7 @@ from pathlib import Path
 import folium
 import pandas as pd
 import streamlit as st
+from branca.element import MacroElement, Template
 from streamlit_folium import st_folium
 from popup import (
     ROAD_CATEGORY_TYPES,
@@ -11,12 +12,42 @@ from popup import (
     ROAD_STATE_TYPES,
     ROAD_WIDTH_TYPES,
     decode_code,
+    make_popup_html,
 )
 from map_generator import style_by_restriction
 from excel_loader import load_excel, save_excel
 from filters import apply_filters
 from config import DEFAULT_LOCATION, DEFAULT_ZOOM, MAP_STYLES
 from permit_documents import get_permit_pdf_path, make_permit_link_html
+
+
+class FeatureInfoBinder(MacroElement):
+    def __init__(self, layer):
+        super().__init__()
+        self._name = "FeatureInfoBinder"
+        self.layer_name = layer.get_name()
+        self._template = Template(
+            """
+            {% macro script(this, kwargs) %}
+            {{ this.layer_name }}.eachLayer(function(layer) {
+                if (!layer.feature || !layer.feature.properties) {
+                    return;
+                }
+
+                const props = layer.feature.properties;
+                if (props._info_html) {
+                    layer.bindTooltip(props._info_html, {
+                        sticky: true,
+                        className: "road-info-tooltip"
+                    });
+                    layer.bindPopup(props._info_html, {
+                        maxWidth: 450
+                    });
+                }
+            });
+            {% endmacro %}
+            """
+        )
 
 
 def parse_progress(value):
@@ -63,6 +94,7 @@ def prepare_map_properties(features):
     for feature in features:
         props = feature.setdefault("properties", {})
         restriction_id = props.get("規制ID", "")
+        permit_link_html = make_permit_link_html(BASE_DIR, restriction_id)
         props["道路中心線"] = decode_code(ROAD_CENTERLINE_TYPES, props.get("N13_002", ""))
         props["道路分類"] = decode_code(ROAD_CATEGORY_TYPES, props.get("N13_003", ""))
         props["道路状態"] = decode_code(ROAD_STATE_TYPES, props.get("N13_004", ""))
@@ -70,6 +102,7 @@ def prepare_map_properties(features):
         props["道路使用許可"] = (
             "登録済" if get_permit_pdf_path(BASE_DIR, restriction_id).exists() else "未登録"
         )
+        props["_info_html"] = make_popup_html(props, permit_link_html)
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -270,76 +303,15 @@ if len(geojson_data["features"]) > 0:
     if feature_bounds is not None:
         m.fit_bounds(feature_bounds, padding=(30, 30))
 
-    folium.GeoJson(
+    restriction_layer = folium.GeoJson(
         geojson_data,
         name="規制区間",
         style_function=lambda feature: style_by_restriction(
             feature,
             st.session_state.get("selected_restriction_id")
         ),
-        tooltip=folium.GeoJsonTooltip(
-            fields=[
-                "規制ID",
-                "工事名",
-                "規制種別",
-                "施工者",
-                "進捗率",
-                "予定進捗率",
-                "道路分類",
-                "道路状態",
-                "幅員",
-            ],
-            aliases=[
-                "ID",
-                "工事名",
-                "規制",
-                "施工者",
-                "進捗",
-                "予定",
-                "道路分類",
-                "道路状態",
-                "幅員",
-            ],
-            sticky=True,
-            labels=True,
-        ),
-        popup=folium.GeoJsonPopup(
-            fields=[
-                "規制ID",
-                "工事名",
-                "規制種別",
-                "開始日",
-                "終了日",
-                "施工者",
-                "進捗率",
-                "予定進捗率",
-                "道路中心線",
-                "道路分類",
-                "道路状態",
-                "幅員",
-                "道路使用許可",
-                "備考",
-            ],
-            aliases=[
-                "ID",
-                "工事名",
-                "規制",
-                "開始日",
-                "終了日",
-                "施工者",
-                "進捗",
-                "予定",
-                "道路中心線",
-                "道路分類",
-                "道路状態",
-                "幅員",
-                "道路使用許可",
-                "備考",
-            ],
-            labels=True,
-            max_width=420,
-        ),
     ).add_to(m)
+    m.add_child(FeatureInfoBinder(restriction_layer))
 
 else:
     st.warning("この条件に該当する規制区間はありません。")
